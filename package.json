@@ -1,6 +1,6 @@
 {
   "name": "cashaccounts",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "decentralized identity system for bitcoin cash by Jonathan Silverblood",
   "main": "index.js",
   "scripts": {

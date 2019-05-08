@@ -121,6 +121,31 @@ class CashAccounts {
     return object;
   }
 
+  async parseBitdbObject(obj) {
+    let { opreturn, blockhash, blockheight, name, transactionhash } = obj;
+    // split[0] // OPRETURN
+    // split[1] // protocol spec
+    // split[2] // username
+    // split[3] // first 2 chars = type, followed by BCH pubkey
+    // split[4] // first 2 chars = type, followed by Token pubkey
+
+    const split = opreturn.split(' ');
+    let number = this.calculateNumber(blockheight);
+    const emoji = this.calculateEmoji(transactionhash, blockhash);
+    const payment = await this.parsePaymentInfo(opreturn);
+
+    const object = {
+      identifier: `${name}#${number}`,
+      information: {
+        emoji: emoji,
+        name: name,
+        number: number,
+        collision: { hash: '', count: 0, length: 0 },
+        payment: payment
+      }
+    };
+    return object;
+  }
   /**
    * Parse cashaccount OPRETURN
    *
@@ -130,12 +155,6 @@ class CashAccounts {
    * @memberof CashAccount
    */
   async parsePaymentInfo(opreturn) {
-    // split[0] // OPRETURN
-    // split[1] // protocol spec
-    // split[2] // username
-    // split[3] // first 2 chars = type, followed by BCH pubkey
-    // split[4] // first 2 chars = type, followed by Token pubkey
-
     const split = opreturn.split(' ');
     const payment = [];
 
@@ -232,7 +251,7 @@ class CashAccounts {
 
     switch (identifier) {
       case '01':
-        address = new bitcoincashjs.Address(
+        address = new bch.Address(
           hash,
           'livenet',
           'pubkeyhash'
@@ -240,7 +259,7 @@ class CashAccounts {
         break;
 
       case '02':
-        address = new bitcoincashjs.Address(
+        address = new bch.Address(
           hash,
           'livenet',
           'scripthash'
@@ -253,7 +272,7 @@ class CashAccounts {
         );
         break;
       case '81':
-        address = new bitcoincashjs.Address(
+        address = new bch.Address(
           hash,
           'livenet',
           'pubkeyhash'
@@ -261,7 +280,7 @@ class CashAccounts {
         break;
 
       case '82':
-        address = new bitcoincashjs.Address(
+        address = new bch.Address(
           hash,
           'livenet',
           'scripthash'
@@ -341,8 +360,8 @@ class CashAccounts {
       .catch(e => {
         console.error('err in getNumberofTxs', e);
       });
-    console.log('bitdb response', response);
-    return response.data.c;
+
+    return response.data.c[0];
   }
 
   /**
@@ -456,6 +475,18 @@ class CashAccounts {
   }
 
   /**
+   * calculate cashaccount number
+   *
+   * @param {int} blockheight - registration blockheight
+   * @returns {string} - 123
+   * @memberof CashAccounts
+   */
+  calculateNumber(blockheight) {
+    blockheight = parseInt(blockheight);
+    const num = blockheight - genesisBlock;
+    return num.toString();
+  }
+  /**
    * check if cash account
    *
    * @param {string} string - ie: jonathan#100
@@ -491,6 +522,17 @@ class CashAccounts {
    */
   bufferString(query) {
     return Buffer.from(JSON.stringify(query)).toString('base64');
+  }
+
+  /**
+   * convert to simpleledger format
+   *
+   * @param {string} addr
+   * @returns {string} simpeledger:qqajsdlkf
+   * @memberof CashAccounts
+   */
+  toSlpAddress(addr) {
+    return bchaddr.toSlpAddress(addr);
   }
 }
 
