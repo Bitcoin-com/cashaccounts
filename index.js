@@ -360,8 +360,38 @@ class CashAccounts {
       .catch(e => {
         console.error('err in getNumberofTxs', e);
       });
-
     return response.data.c[0];
+  }
+
+  /**
+   * find pending registration by Txid
+   *
+   * @param {string} txid - registration transaction id
+   * @returns {object} - confirmed registration transaction
+   * @memberof CashAccounts
+   */
+  async registrationLookupViaTxid(txid) {
+    const query = {
+      v: 3,
+      q: {
+        find: {
+          'tx.h': txid
+        },
+        limit: 1
+      },
+      r: {
+        f:
+          '[ .[] | { blockheight: .blk.i?, blockhash: .blk.h?, transactionhash: .tx.h?, opreturn: .out[0].str, name: .out[0].s2, data: .out[0].h3} ]'
+      }
+    };
+    const urlString = this.bufferString(query);
+    const response = await axios
+      .get(`https://bitdb.bch.sx/q/${urlString}`)
+      .catch(e => {
+        console.error('err in getNumberofTxs', e);
+      });
+
+    return response.data.u[0];
   }
 
   /**
