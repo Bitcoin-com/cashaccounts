@@ -6,6 +6,7 @@ const base58check = require('base58check');
 const bitcoincashjs = require('bitcoincashjs-lib');
 const bch = require('bitcore-lib-cash');
 const bchaddr = require('bchaddrjs-slp');
+const bchRPC = require('bitcoin-cash-rpc');
 
 const genesisBlock = 563720 - 100;
 
@@ -16,25 +17,34 @@ class CashAccounts {
    * @param {string} server - if you have your own lookup server
    */
 
-  constructor(server) {
+  constructor(server, nodeCredentials) {
     this.server = server || 'https://api.cashaccount.info';
+
+    console.log('nodeCredentials', nodeCredentials, typeof nodeCredentials);
+
+    if (nodeCredentials) {
+      const { host, username, password, port, timeout } = nodeCredentials;
+
+      this.bchNode = new bchRPC(host, username, password, port, timeout);
+    }
+
+    console.log('this.bch', this.bchNode);
   }
 
   /**
    * get the address for user's handle
    *
-   * @param {string} string - ie: jonathan#100
+   * @param {string} handle - ie: jonathan#100
    * @returns {obj}
    * @memberof CashAccount
    */
-  async getAddressByCashAccount(string) {
-    const split = string.split('#');
+  async getAddressByCashAccount(handle) {
+    const split = this.splitHandle(handle);
 
-    const name = split[0];
+    const { username, number } = split;
 
-    const number = split[1];
     const csplit = number.split('.');
-    const url = `${this.server}/account/${csplit[0]}/${name}/${
+    const url = `${this.server}/account/${csplit[0]}/${username}/${
       csplit.length === 2 ? csplit[1] : ''
     }`;
 
@@ -55,15 +65,15 @@ class CashAccounts {
    *
    * @param {string} username - ie: jonathan
    * @param {string} bchAddress - ie: bitcoincash:qqqqqqq
-   * @param {string} tokenAddress - ie: simpleledger:qqqqqqq
+   * @param {string} slpAddress - ie: simpleledger:qqqqqqq
    * @returns {obj} hex and txid
    * @memberof CashAccount
    */
-  async registerCashAccount(username, bchAddress, tokenAddress) {
+  async trustedRegistration(username, bchAddress, slpAddress) {
     const url = `${this.server}/register`;
     const payments = [bchAddress];
-    if (tokenAddress) {
-      payments.push(tokenAddress);
+    if (slpAddress) {
+      payments.push(slpAddress);
     }
 
     const data = {
@@ -77,7 +87,7 @@ class CashAccounts {
         return x.data;
       })
       .catch(err => {
-        console.log('error in registerCashAccount', err);
+        console.log('error in trustedRegistration', err);
       });
 
     return resp;
@@ -90,12 +100,11 @@ class CashAccounts {
    * @returns {object}
    * @memberof CashAccounts
    */
-  async getAccountInfo(handle) {
-    const split = handle.split('#');
-    const username = split[0];
-    const number = split[1];
+  async trustedLookup(handle) {
+    const split = this.splitHandle(handle);
+    const { username, number } = split;
 
-    let data = await this.accountLookupViaBitDB(username, number);
+    let data = await this.TrustedBitdbLookup(username, number);
 
     if (!data.c.length && !data.u.length) {
       return {};
@@ -107,6 +116,7 @@ class CashAccounts {
     const payment = await this.parsePaymentInfo(opreturn);
 
     const emoji = this.calculateEmoji(transactionhash, blockhash);
+    const collision = this.calculateCollisionHash(blockhash, transactionhash);
 
     const object = {
       identifier: `${username}#${number}`,
@@ -114,7 +124,7 @@ class CashAccounts {
         emoji: emoji,
         name: username,
         number: number,
-        collision: { hash: '', count: 0, length: 0 },
+        collision: { hash: collision, count: 0, length: 0 },
         payment: payment
       }
     };
@@ -129,10 +139,10 @@ class CashAccounts {
     // split[3] // first 2 chars = type, followed by BCH pubkey
     // split[4] // first 2 chars = type, followed by Token pubkey
 
-    const split = opreturn.split(' ');
     let number = this.calculateNumber(blockheight);
     const emoji = this.calculateEmoji(transactionhash, blockhash);
     const payment = await this.parsePaymentInfo(opreturn);
+    const collision = this.calculateCollisionHash(blockhash, transactionhash);
 
     const object = {
       identifier: `${name}#${number}`,
@@ -140,16 +150,16 @@ class CashAccounts {
         emoji: emoji,
         name: name,
         number: number,
-        collision: { hash: '', count: 0, length: 0 },
+        collision: { hash: collision, count: 0, length: 0 },
         payment: payment
       }
     };
     return object;
   }
+
   /**
    * Parse cashaccount OPRETURN
    *
-   * @
    * @param {string} opreturn
    * @returns {object} match the output of cashaccount lookup server
    * @memberof CashAccount
@@ -166,6 +176,54 @@ class CashAccounts {
       payment.push(tokenPayment);
     }
     return payment;
+  }
+
+  /**
+   * get address(es) by handle
+   *
+   * @param {string} handle - ie: jonathan#100
+   * @returns {object} payment information
+   * @memberof CashAccounts
+   */
+  async getPaymentInfo(handle) {
+    let account = await this.trustedLookup(handle);
+
+    const {
+      information: { payment }
+    } = account;
+
+    return payment;
+  }
+
+  /**
+   * get BCH address from cashaccount
+   *
+   * @param {string} handle - ie: jonathan#100
+   * @returns {object} payment type and address
+   * @memberof CashAccounts
+   */
+  async getBCHAddress(handle) {
+    const payment = await this.getPaymentInfo(handle);
+    return payment[0];
+  }
+
+  /**
+   * get token address from cashaccount
+   *
+   * @param {string} handle - ie: jonathan#100
+   * @returns {object} token address
+   * @memberof CashAccounts
+   */
+  async getslpAddress(handle) {
+    const payment = await this.getPaymentInfo(handle);
+
+    if (payment.length < 2) {
+      return {
+        warning: 'This account does not have a token address registered.'
+      };
+    } else {
+      return payment[1];
+    }
   }
 
   /**
@@ -304,7 +362,7 @@ class CashAccounts {
    * @returns {object} - array of confirmed and unconfirmed transactions
    * @memberof CashAccounts
    */
-  async accountLookupViaBitDB(username, number) {
+  async TrustedBitdbLookup(username, number) {
     number = parseInt(number);
     const height = genesisBlock + number;
 
@@ -417,7 +475,58 @@ class CashAccounts {
   }
 
   /**
-   * build opreturn script
+   * broadcast cashaccount registration with your own node
+   *
+   * @param {string} username
+   * @param {string} bchAddress
+   * @param {string} slpAddress
+   * @returns {string} txid - registration transaction hash
+   * @memberof CashAccounts
+   */
+  async trustlessRegistration(username, bchAddress, slpAddress) {
+    let txString = await this.generateRawTx(username, bchAddress, slpAddress);
+    let hex = await bchNode.signRawTransaction(txString);
+    let txid = await bchNode.sendRawTransaction(hex.hex);
+    return txid;
+  }
+
+  /**
+   * creates the raw transaction to be broadcast later
+   *
+   * @param {string} username
+   * @param {string} bchAddress
+   * @param {string} slpAddress
+   * @returns {string} raw transaction of registration
+   * @memberof CashAccounts
+   */
+  async generateRawTx(username, bchAddress, slpAddress) {
+    let registrationObj = this.createRegistrationObj(
+      username,
+      bchAddress,
+      slpAddress
+    );
+    let script = this.buildScript(registrationObj);
+
+    let unspent = await this.bchNode.listUnspent(1);
+    if (unspent === undefined || unspent.length === 0) {
+      unspent = await this.bchNode.listUnspent(0);
+    }
+    if (unspent === undefined || unspent.length === 0) {
+      return { status: 'no UTXOs available' };
+    }
+
+    const changeAddr = await this.bchNode.getRawChangeAddress();
+
+    let tx = new bch.Transaction().from(unspent).feePerKb(1002);
+    tx.addOutput(new bch.Transaction.Output({ script: script, satoshis: 0 }));
+    tx.change(changeAddr);
+
+    return tx.toString();
+  }
+
+  /**
+   *
+    build opreturn script
    *
    * @param {oject} registrationObj
    * @returns
@@ -505,6 +614,58 @@ class CashAccounts {
   }
 
   /**
+   * calculate collision hash
+   *
+   * @param {string} blockhash - registration blockheight
+   * @param {string} txid - transaction hash
+   * @returns {string} -
+   * @memberof CashAccounts
+   */
+  calculateCollisionHash(blockhash, txid) {
+    blockhash = Buffer.from(blockhash, 'hex');
+    txid = Buffer.from(txid, 'hex');
+
+    // Step 1: Concatenate the block hash with the transaction hash
+    const concat = Buffer.concat([blockhash, txid]);
+
+    // Step 2: Hash the results of the concatenation with sha256
+    const hash = crypto
+      .createHash('sha256')
+      .update(concat)
+      .digest('hex');
+
+    // Step 3: Take the first four bytes and discard the rest
+    const firstFour = hash.substring(0, 8);
+
+    // Step 4: Convert to decimal notation and store as a string
+    const decimalNotation = parseInt(firstFour, 16);
+
+    // Step 5: Reverse the the string so the last number is first
+    const reverse = decimalNotation
+      .toString()
+      .split('')
+      .reverse()
+      .join('');
+
+    // Step 6: Right pad the string with zeroes up to a string length of 10.
+    const padded = this.rightPadWithZeros(reverse);
+
+    return padded;
+  }
+
+  rightPadWithZeros(string) {
+    let count = string.length;
+    let diff = 10 - parseInt(count);
+    if (diff >= 0) {
+      let val = 10 ** diff;
+      val = val.toString().substring(1);
+      string += val;
+    }
+
+    return string;
+  }
+
+  /**
    * calculate cashaccount number
    *
    * @param {int} blockheight - registration blockheight
@@ -516,6 +677,7 @@ class CashAccounts {
     const num = blockheight - genesisBlock;
     return num.toString();
   }
+
   /**
    * check if cash account
    *
@@ -539,10 +701,11 @@ class CashAccounts {
   splitHandle(handle) {
     handle = handle.split('#');
     return {
-      username: split[0],
-      number: split[1]
+      username: handle[0],
+      number: handle[1]
     };
   }
+
   /**
    * Buffer string for bitdb
    *
@@ -566,5 +729,4 @@ class CashAccounts {
   }
 }
 
-let container = new CashAccounts();
-module.exports = container;
+module.exports = CashAccounts;
