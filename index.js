@@ -20,15 +20,11 @@ class CashAccounts {
   constructor(server, nodeCredentials) {
     this.server = server || 'https://api.cashaccount.info';
 
-    console.log('nodeCredentials', nodeCredentials, typeof nodeCredentials);
-
     if (nodeCredentials) {
       const { host, username, password, port, timeout } = nodeCredentials;
 
       this.bchNode = new bchRPC(host, username, password, port, timeout);
     }
-
-    console.log('this.bch', this.bchNode);
   }
 
   /**
@@ -112,23 +108,30 @@ class CashAccounts {
     // take first confirmed
     data = data.c[0];
 
-    const { opreturn, transactionhash, blockhash } = data;
-    const payment = await this.parsePaymentInfo(opreturn);
+    const info = await this.parseBitdbObject(data);
+    return info;
+  }
 
-    const emoji = this.calculateEmoji(transactionhash, blockhash);
-    const collision = this.calculateCollisionHash(blockhash, transactionhash);
+  /**
+   * returns multiple results
+   *
+   * @param {*} handle
+   * @memberof CashAccounts
+   */
+  async trustedSearch(handle) {
+    const split = this.splitHandle(handle);
+    const { username, number } = split;
 
-    const object = {
-      identifier: `${username}#${number}`,
-      information: {
-        emoji: emoji,
-        name: username,
-        number: number,
-        collision: { hash: collision, count: 0, length: 0 },
-        payment: payment
-      }
-    };
-    return object;
+    const results = await this.TrustedBitdbLookup(username, number);
+    let data = results.c;
+    let array = [];
+
+    for (const each of data) {
+      let item = await this.parseBitdbObject(each);
+      item.txid = each.transactionhash;
+      array.push(item);
+    }
+    return array;
   }
 
   async parseBitdbObject(obj) {
