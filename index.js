@@ -90,6 +90,45 @@ class CashAccounts {
   }
 
   /**
+   * get metadata on cashaccount from your node
+   *
+   * @param {*} transaction transaction hex
+   * @returns {object}
+   * @memberof CashAccounts
+   */
+  async trustlessLookup(transaction) {
+    const tx = await this.bchNode.decodeRawTransaction(transaction);
+
+    const raw = await this.bchNode.getRawTransaction(tx.txid, 1);
+
+    const { blockhash, txid } = raw;
+    const block = await this.bchNode.getBlock(blockhash);
+
+    const { height } = block;
+
+    const opreturn = tx.vout.find(x => x.scriptPubKey.type === 'nulldata')
+      .scriptPubKey.asm;
+
+    let number = this.calculateNumber(height);
+    const emoji = this.calculateEmoji(txid, blockhash);
+    const payment = await this.parsePaymentInfo(opreturn);
+    const collision = this.calculateCollisionHash(blockhash, txid);
+    const name = await this.parseName(opreturn);
+
+    const object = {
+      identifier: `${name}#${number}`,
+      information: {
+        emoji: emoji,
+        name: name,
+        number: number,
+        collision: { hash: collision, count: 0, length: 0 },
+        payment: payment
+      }
+    };
+    return object;
+  }
+
+  /**
    * get metadata on cashaccount
    *
    * @param {string} handle - ie: jonathan#100
@@ -161,7 +200,7 @@ class CashAccounts {
   }
 
   /**
-   * Parse cashaccount OPRETURN
+   * Parse cashaccount payment info
    *
    * @param {string} opreturn
    * @returns {object} match the output of cashaccount lookup server
@@ -179,6 +218,20 @@ class CashAccounts {
       payment.push(tokenPayment);
     }
     return payment;
+  }
+
+  /**
+   * Parse cashaccount name
+   *
+   * @param {string} opreturn
+   * @returns {object} get name from registration opreturn
+   * @memberof CashAccount
+   */
+  async parseName(opreturn) {
+    const split = opreturn.split(' ');
+    const name = Buffer.from(split[2], 'hex');
+    let string = name.toString('ascii');
+    return string;
   }
 
   /**
