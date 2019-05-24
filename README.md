@@ -5,7 +5,7 @@
 Cashaccounts allow you to use aliases to send Bitcoin Cash and Tokens instead of
 having to type out or memorize things like
 `bitcoincash:qp3wjpa3tjlj042z2wv7hahsldgwhwy0rq9sywjpyy`. They look like
-`Jonathan#100`; The usernamed followed by the number (based on block height
+`Jonathan#100`; The username followed by the number (based on block height
 registration).
 
 ## Installation
@@ -44,9 +44,18 @@ object looks like
 
 ### Trusted methods
 
-#### cashAccounts.trustedRegistration(username, bchAddress, slpAddress)
+#### trustedRegistration(username, bchAddress, slpAddress)
 
-#### cashAccounts.trustedLookup(handle) // jonathan#100
+returns
+
+```
+{
+  txid: "0e436928cb4370be2f46258ace2c70e81e4cc67d88cb75805c…",
+  hex: "0100000001cd90df45fba8dc4940eb72eb349a67ea63f9e451…"
+}
+```
+
+#### trustedLookup(handle) // jonathan#100
 
 returns
 
@@ -76,7 +85,13 @@ returns
 }
 ```
 
-#### cashAccounts.TrustedBitdbLookup(handle) // jonathan#100
+handles can include the collision hash noted with a `.`.
+
+For example;
+
+trustedLookup(ectest#1106.9871360083)
+
+#### trustedBitdbLookup(handle) // jonathan#100
 
 returns
 
@@ -102,13 +117,70 @@ returns
 }
 ```
 
+#### accountLookupViaTxid(txid)
+
+returns
+
+```
+{
+  "blockhash" : "00000000000000000331f42d43f6a460e1bb634bd2e16a1fad9dbdf80beae100",
+  "blockheight" : 581590,
+  "data" : "01249a7741ea9f5106a9d25f156a348ee554688606",
+  "name" : "account1",
+  "opreturn" : "OP_RETURN 01010101 6163636f756e7431 01249a7741ea9f5106a9d25f156a348ee554688606  01dd4913aaef64d4e523fcb0034c41f85947590dc0",
+  "transactionhash" : "ca53a8c0f4af966a36ad9e5022c0d53f132caf4bbbafc4e0ebbc471bb4e261e5"
+}
+```
+
 ### Trustless methods
 
-WIP
-
-#### cashAccounts.trustlessRegistration(username, bchAddress, slpAddress)
-
 requires your own node via passing in the `nodeCredentials` object.
+
+#### trustlessLookup(handle) // jonathan#100
+
+returns
+
+```
+{
+  "identifier": "Jonathan#100;",
+  "information": {
+    "emoji": "☯",
+    "name": "Jonathan",
+    "number": 100,
+    "collision": {
+    "hash": "5876958390",
+    "count": 0,
+    "length": 0
+  },
+  "payment": [
+      {
+        "address": "bitcoincash:qr4aadjrpu73d2wxwkxkcrt6gqxgu6a7usxfm96fst",
+        "type": "Key Hash"
+      }
+    ]
+  }
+}
+```
+
+#### trustlessRegistration(username, bchAddress, slpAddress)
+
+### Utils
+
+#### splitHandle(handle)
+
+returns an object with the username, number, and collision
+
+```
+{
+  username: 'jonathan',
+  number: '100',
+  collision: false
+}
+```
+
+#### isCashAccount(handle)
+
+returns boolean
 
 ## References
 

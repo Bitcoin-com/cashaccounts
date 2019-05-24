@@ -27,30 +27,26 @@ class CashAccounts {
     }
   }
 
-  /**
-   * get the address for user's handle
-   *
-   * @param {string} handle - ie: jonathan#100
-   * @returns {obj}
-   * @memberof CashAccount
-   */
-  async getAddressByCashAccount(handle) {
+  buildSearchUrl(handle, lookupMethod) {
     const split = this.splitHandle(handle);
 
-    const { username, number } = split;
+    const { username, number, collision } = split;
 
     const csplit = number.split('.');
-    const url = `${this.server}/account/${csplit[0]}/${username}/${
-      csplit.length === 2 ? csplit[1] : ''
+    const url = `${this.server}/${lookupMethod}/${csplit[0]}/${username}/${
+      collision ? collision : ''
     }`;
+    return url;
+  }
 
+  async performTrustedSearch(url) {
     const data = await axios
       .get(url)
       .then(x => {
         return x.data;
       })
       .catch(err => {
-        console.log('error in getAddressByCashAccount', err.response);
+        console.log('error in performTrustedSearch', ' url', url, err.response);
       });
 
     return data;
@@ -92,12 +88,18 @@ class CashAccounts {
   /**
    * get metadata on cashaccount from your node
    *
-   * @param {*} transaction transaction hex
+   * @param {string} handle - ie: jonathan#100
    * @returns {object}
    * @memberof CashAccounts
    */
-  async trustlessLookup(transaction) {
-    const tx = await this.bchNode.decodeRawTransaction(transaction);
+  async trustlessLookup(handle) {
+    const url = await this.buildSearchUrl(handle, 'lookup');
+    const data = await this.performTrustedSearch(url);
+
+    const { results } = data;
+
+    // first result
+    const tx = await this.bchNode.decodeRawTransaction(results[0].transaction);
 
     const raw = await this.bchNode.getRawTransaction(tx.txid, 1);
 
@@ -131,35 +133,34 @@ class CashAccounts {
   /**
    * get metadata on cashaccount
    *
-   * @param {string} handle - ie: jonathan#100
+   * @param {string} handle - ie: jonathan#100, or with collision ectest#1106.9871360083
    * @returns {object}
    * @memberof CashAccounts
    */
   async trustedLookup(handle) {
-    const split = this.splitHandle(handle);
-    const { username, number } = split;
+    const url = await this.buildSearchUrl(handle, 'account');
 
-    let data = await this.TrustedBitdbLookup(username, number);
+    const data = await axios
+      .get(url)
+      .then(x => {
+        return x.data;
+      })
+      .catch(err => {
+        console.log('error in getAddressByCashAccount', err.response);
+      });
 
-    if (!data.c.length && !data.u.length) {
-      return {};
-    }
-    // take first confirmed
-    data = data.c[0];
-
-    const info = await this.parseBitdbObject(data);
-    return info;
+    return data;
   }
 
   /**
    * returns multiple results
    *
-   * @param {*} handle
+   * @param {string} handle
    * @memberof CashAccounts
    */
   async trustedSearch(handle) {
     const split = this.splitHandle(handle);
-    const { username, number } = split;
+    const { username, number, collision } = split;
 
     const results = await this.TrustedBitdbLookup(username, number);
     let data = results.c;
@@ -237,7 +238,7 @@ class CashAccounts {
   /**
    * get address(es) by handle
    *
-   * @param {string} handle - ie: jonathan#100
+   * @param {string} handle - ie: jonathan#100, or with collision ectest#1106.9871360083
    * @returns {object} payment information
    * @memberof CashAccounts
    */
@@ -254,7 +255,7 @@ class CashAccounts {
   /**
    * get BCH address from cashaccount
    *
-   * @param {string} handle - ie: jonathan#100
+   * @param {string} handle - ie: jonathan#100, or with collision ectest#1106.9871360083
    * @returns {object} payment type and address
    * @memberof CashAccounts
    */
@@ -266,7 +267,7 @@ class CashAccounts {
   /**
    * get token address from cashaccount
    *
-   * @param {string} handle - ie: jonathan#100
+   * @param {string} handle - ie: jonathan#100, or with collision ectest#1106.9871360083
    * @returns {object} token address
    * @memberof CashAccounts
    */
@@ -413,12 +414,14 @@ class CashAccounts {
   /**
    * search bitdb for cashaccount
    *
-   * @param {string} username
-   * @param {string} number
+   * @param {string} handle - ie: jonathan#100, or with collision ectest#1106.9871360083
    * @returns {object} - array of confirmed and unconfirmed transactions
    * @memberof CashAccounts
    */
-  async TrustedBitdbLookup(username, number) {
+  async trustedBitdbLookup(handle) {
+    const split = this.splitHandle(handle);
+    const { username, number, collision } = split;
+
     number = parseInt(number);
     const height = genesisBlock + number;
 
@@ -743,22 +746,30 @@ class CashAccounts {
    */
   isCashAccount(string) {
     const cashAccountRegex = /^([a-zA-Z0-9_]+)(#([0-9]+)(([0-9]+))).([0-9]+)?$/i;
-
     return cashAccountRegex.test(string);
   }
 
   /**
    * split/parse a cashaccount handle
    *
-   * @param {string} handle - ie: jonathan#100
-   * @returns {object} {username: 'jonathan', number: '100'}
+   * @param {string} handle - ie: jonathan#100, or with collision ectest#1106.9871360083
+   * @returns {object} {username: 'jonathan', number: '100', collision: false}
    * @memberof CashAccounts
    */
   splitHandle(handle) {
-    handle = handle.split('#');
+    let collision;
+
+    if (handle.includes('.')) {
+      collision = handle.split('.');
+      handle = collision[0].split('#');
+    } else {
+      handle = handle.split('#');
+    }
+
     return {
       username: handle[0],
-      number: handle[1]
+      number: handle[1],
+      collision: collision !== undefined && collision[1]
     };
   }
 
