@@ -40,14 +40,16 @@ class CashAccounts {
   }
 
   async performTrustedSearch(url) {
-    const data = await axios
-      .get(url)
-      .then(x => {
-        return x.data;
-      })
-      .catch(err => {
-        console.log('error in performTrustedSearch', ' url', url, err.response);
-      });
+    const data = await axios.get(url).then(x => {
+      if (x.data === undefined) {
+        throw new Error('error in search');
+      }
+      return x.data;
+    });
+
+    // .catch(err => {
+    //   console.log('error in performTrustedSearch', ' url', url, err.response);
+    // });
 
     return data;
   }
@@ -73,14 +75,16 @@ class CashAccounts {
       payments
     };
 
-    const resp = await axios
-      .post(url, data)
-      .then(x => {
-        return x.data;
-      })
-      .catch(err => {
-        console.log('error in trustedRegistration', err);
-      });
+    const resp = await axios.post(url, data).then(x => {
+      if (x.data === undefined) {
+        throw new Error('error with registration');
+      }
+      return x.data;
+    });
+
+    // .catch(err => {
+    //   console.log('error in trustedRegistration', err);
+    // });
 
     return resp;
   }
@@ -140,14 +144,16 @@ class CashAccounts {
   async trustedLookup(handle) {
     const url = await this.buildSearchUrl(handle, 'account');
 
-    const data = await axios
-      .get(url)
-      .then(x => {
-        return x.data;
-      })
-      .catch(err => {
-        console.log('error in getAddressByCashAccount', err.response);
-      });
+    const data = await axios.get(url).then(x => {
+      if (x.data === undefined) {
+        throw new Error('error with lookup');
+      }
+      return x.data;
+    });
+
+    // .catch(err => {
+    //   console.log('error in getAddressByCashAccount', err.response);
+    // });
 
     return data;
   }
@@ -441,11 +447,14 @@ class CashAccounts {
       }
     };
     const urlString = this.bufferString(query);
-    const response = await axios
-      .get(`https://bitdb.bch.sx/q/${urlString}`)
-      .catch(e => {
-        console.error('err in getNumberofTxs', e);
-      });
+    const response = await axios.get(`https://bitdb.bch.sx/q/${urlString}`);
+    if (response.data === undefined) {
+      throw new Error('error bitdb lookup');
+    }
+
+    // .catch(e => {
+    //   console.error('err in getNumberofTxs', e);
+    // });
 
     return response.data;
   }
@@ -472,11 +481,15 @@ class CashAccounts {
       }
     };
     const urlString = this.bufferString(query);
-    const response = await axios
-      .get(`https://bitdb.bch.sx/q/${urlString}`)
-      .catch(e => {
-        console.error('err in getNumberofTxs', e);
-      });
+    const response = await axios.get(`https://bitdb.bch.sx/q/${urlString}`);
+
+    if (response.data === undefined) {
+      throw new Error('error with account lookup');
+    }
+
+    // .catch(e => {
+    //   console.error('err in getNumberofTxs', e);
+    // });
     return response.data.c[0];
   }
 
@@ -502,11 +515,14 @@ class CashAccounts {
       }
     };
     const urlString = this.bufferString(query);
-    const response = await axios
-      .get(`https://bitdb.bch.sx/q/${urlString}`)
-      .catch(e => {
-        console.error('err in getNumberofTxs', e);
-      });
+    const response = await axios.get(`https://bitdb.bch.sx/q/${urlString}`);
+
+    if (response.data === undefined) {
+      throw new Error('error with registration lookup');
+    }
+    // .catch(e => {
+    //   console.error('err in getNumberofTxs', e);
+    // });
 
     return response.data.u[0];
   }
