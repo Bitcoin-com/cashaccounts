@@ -27,6 +27,7 @@ class CashAccounts {
     }
   }
 
+  // lookup || account
   buildSearchUrl(handle, lookupMethod) {
     const split = this.splitHandle(handle);
 
@@ -145,15 +146,25 @@ class CashAccounts {
     const url = await this.buildSearchUrl(handle, 'account');
 
     const data = await axios.get(url).then(x => {
-      if (x.data === undefined) {
-        throw new Error('error with lookup');
-      }
       return x.data;
     });
 
-    // .catch(err => {
-    //   console.log('error in getAddressByCashAccount', err.response);
-    // });
+    return data;
+  }
+
+  /**
+   * get inclusion proofs on cashaccounts
+   *
+   * @param {string} handle - ie: jonathan#100
+   * @returns {object}
+   * @memberof CashAccounts
+   */
+  async getBatchResults(handle) {
+    const url = await this.buildSearchUrl(handle, 'lookup');
+
+    const data = await axios.get(url).then(x => {
+      return x.data;
+    });
 
     return data;
   }
