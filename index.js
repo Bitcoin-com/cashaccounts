@@ -577,6 +577,35 @@ class CashAccounts {
   }
 
   /**
+   * find cash accounts associated with an address
+   *
+   * @param {string} address - ie: bitcoincash:qqqqqqq
+   * @returns {obj} hex and txid
+   * @memberof CashAccount
+   */
+  async reverseLookup(address) {
+    if (this.server === 'https://api.cashaccount.info') {
+      return {
+        status: 'The default lookup server does not support this endpoint'
+      };
+    }
+    const url = `${this.server}/reverselookup/${address}`;
+
+    const resp = await axios.get(url).then(x => {
+      if (x.data === undefined) {
+        throw new Error('error with reverseLookup');
+      }
+      return x.data;
+    });
+
+    // .catch(err => {
+    //   console.log('error in trustedRegistration', err);
+    // });
+
+    return resp;
+  }
+
+  /**
    * creates the raw transaction to be broadcast later
    *
    * @param {string} username
