@@ -48,10 +48,6 @@ class CashAccounts {
       return x.data;
     });
 
-    // .catch(err => {
-    //   console.log('error in performTrustedSearch', ' url', url, err.response);
-    // });
-
     return data;
   }
 
@@ -82,10 +78,6 @@ class CashAccounts {
       }
       return x.data;
     });
-
-    // .catch(err => {
-    //   console.log('error in trustedRegistration', err);
-    // });
 
     return resp;
   }
@@ -597,10 +589,6 @@ class CashAccounts {
       }
       return x.data;
     });
-
-    // .catch(err => {
-    //   console.log('error in trustedRegistration', err);
-    // });
 
     return resp;
   }
