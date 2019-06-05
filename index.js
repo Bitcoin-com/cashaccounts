@@ -790,6 +790,22 @@ class CashAccounts {
    */
   isCashAccount(string) {
     const cashAccountRegex = /^([a-zA-Z0-9_]+)(#([0-9]+)(([0-9]+))).([0-9]+)?$/i;
+
+    const split = this.splitHandle(string);
+    const { username, number } = split;
+
+    if (isNaN(number)) {
+      return false;
+    }
+
+    if (username === undefined) {
+      return false;
+    }
+
+    if (number === undefined) {
+      return false;
+    }
+
     return cashAccountRegex.test(string);
   }
 
