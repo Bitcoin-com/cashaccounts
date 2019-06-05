@@ -18,7 +18,7 @@ class CashAccounts {
    */
 
   constructor(server, nodeCredentials) {
-    this.server = server || 'https://api.cashaccount.info';
+    this.server = server || 'https://cashaccounts.bchdata.cash';
 
     if (nodeCredentials) {
       const { host, username, password, port, timeout } = nodeCredentials;
