@@ -628,6 +628,25 @@ class CashAccounts {
   }
 
   /**
+   * creates the raw op return script
+   *
+   * @param {string} username
+   * @param {string} bchAddress
+   * @param {string} slpAddress
+   * @returns {string} registration script
+   * @memberof CashAccounts
+   */
+  async createRawOpReturn(username, bchAddress, slpAddress) {
+    let registrationObj = this.createRegistrationObj(
+      username,
+      bchAddress,
+      slpAddress
+    );
+    let script = this.buildScript(registrationObj);
+    return script.toString();
+  }
+
+  /**
    *
     build opreturn script
    *
@@ -664,6 +683,7 @@ class CashAccounts {
         s.add(Buffer.from(token_map[key] + value, 'hex'));
       }
     }
+    console.log('test', s.toString());
 
     return s;
   }
