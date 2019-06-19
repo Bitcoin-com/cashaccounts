@@ -431,8 +431,8 @@ class CashAccounts {
     const split = this.splitHandle(handle);
     const { username, number, collision } = split;
 
-    number = parseInt(number);
-    const height = genesisBlock + number;
+    let accountNumber = parseInt(number);
+    const height = genesisBlock + accountNumber;
 
     const query = {
       v: 3,
