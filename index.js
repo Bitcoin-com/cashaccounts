@@ -171,7 +171,7 @@ class CashAccounts {
     const split = this.splitHandle(handle);
     const { username, number, collision } = split;
 
-    const results = await this.TrustedBitdbLookup(username, number);
+    const results = await this.trustedBitdbLookup(username, number);
     let data = results.c;
     let array = [];
 
