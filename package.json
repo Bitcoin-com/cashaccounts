@@ -1,6 +1,6 @@
 {
   "name": "cashaccounts",
-  "version": "0.4.6",
+  "version": "0.5.0",
   "description": "decentralized identity system for bitcoin cash by Jonathan Silverblood",
   "main": "index.js",
   "scripts": {
@@ -14,7 +14,6 @@
     "bchaddrjs-slp": "https://github.com/simpleledger/bchaddrjs.git",
     "bitcoin-cash-rpc": "^0.4.2",
     "bitcoincashjs-lib": "https://github.com/Bitcoin-com/bitcoincashjs-lib.git",
-    "bitcore-lib-cash": "https://github.com/paOol/bitcore-lib-cash.git",
     "cashaddrjs": "^0.3.3"
   },
   "keywords": [

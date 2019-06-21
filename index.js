@@ -4,7 +4,6 @@ const axios = require('axios');
 const cashaddr = require('cashaddrjs');
 const base58check = require('base58check');
 const bitcoincashjs = require('bitcoincashjs-lib');
-const bch = require('bitcore-lib-cash');
 const bchaddr = require('bchaddrjs-slp');
 const bchRPC = require('bitcoin-cash-rpc');
 
@@ -168,10 +167,7 @@ class CashAccounts {
    * @memberof CashAccounts
    */
   async trustedSearch(handle) {
-    const split = this.splitHandle(handle);
-    const { username, number, collision } = split;
-
-    const results = await this.trustedBitdbLookup(username, number);
+    const results = await this.trustedBitdbLookup(handle);
     let data = results.c;
     let array = [];
 
@@ -193,6 +189,7 @@ class CashAccounts {
 
     let number = this.calculateNumber(blockheight);
     const emoji = this.calculateEmoji(transactionhash, blockhash);
+
     const payment = await this.parsePaymentInfo(opreturn);
     const collision = this.calculateCollisionHash(blockhash, transactionhash);
 
@@ -375,19 +372,16 @@ class CashAccounts {
 
     switch (identifier) {
       case '01':
-        address = new bch.Address(
-          hash,
-          'livenet',
-          'pubkeyhash'
-        ).toCashAddress();
+        address = cashaddr.encode(
+          'bitcoincash',
+          'P2PKH',
+          Uint8Array.from(hash)
+        );
+
         break;
 
       case '02':
-        address = new bch.Address(
-          hash,
-          'livenet',
-          'scripthash'
-        ).toCashAddress();
+        address = cashaddr.encode('bitcoincash', 'P2SH', Uint8Array.from(hash));
         break;
 
       case '03':
@@ -395,26 +389,27 @@ class CashAccounts {
           Buffer.concat([Buffer.from('47', 'hex'), hash])
         );
         break;
+
+      // token registrations
       case '81':
-        address = new bch.Address(
-          hash,
-          'livenet',
-          'pubkeyhash'
-        ).toCashAddress();
+        address = cashaddr.encode(
+          'bitcoincash',
+          'P2PKH',
+          Uint8Array.from(hash)
+        );
+        address = this.toSlpAddress(address);
         break;
 
       case '82':
-        address = new bch.Address(
-          hash,
-          'livenet',
-          'scripthash'
-        ).toCashAddress();
+        address = cashaddr.encode('bitcoincash', 'P2SH', Uint8Array.from(hash));
+        address = this.toSlpAddress(address);
         break;
 
       case '83':
         address = bitcoincashjs.encoding.Base58Check.encode(
           Buffer.concat([Buffer.from('47', 'hex'), hash])
         );
+        address = this.toSlpAddress(address);
         break;
     }
     return address;
@@ -429,9 +424,11 @@ class CashAccounts {
    */
   async trustedBitdbLookup(handle) {
     const split = this.splitHandle(handle);
+
     const { username, number, collision } = split;
 
     let accountNumber = parseInt(number);
+
     const height = genesisBlock + accountNumber;
 
     const query = {
@@ -451,6 +448,7 @@ class CashAccounts {
     };
     const urlString = this.bufferString(query);
     const response = await axios.get(`https://bitdb.bch.sx/q/${urlString}`);
+
     if (response.data === undefined) {
       throw new Error('error bitdb lookup');
     }
@@ -683,8 +681,6 @@ class CashAccounts {
         s.add(Buffer.from(token_map[key] + value, 'hex'));
       }
     }
-    console.log('test', s.toString());
-
     return s;
   }
 
@@ -845,7 +841,6 @@ class CashAccounts {
     } else {
       handle = handle.split('#');
     }
-
     return {
       username: handle[0],
       number: handle[1],
