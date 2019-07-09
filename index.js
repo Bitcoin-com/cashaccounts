@@ -7,6 +7,8 @@ const bitcoincashjs = require('bitcoincashjs-lib');
 const bchaddr = require('bchaddrjs-slp');
 const bchRPC = require('bitcoin-cash-rpc');
 
+let BITBOX = require('bitbox-sdk').BITBOX;
+let bitbox = new BITBOX();
 const genesisBlock = 563720 - 100;
 
 class CashAccounts {
@@ -642,6 +644,20 @@ class CashAccounts {
     );
     let script = this.buildScript(registrationObj);
     return script.toString();
+  }
+
+  /**
+   * turn string username into hex'ed string for registration
+   *
+   * @param {string} username
+   * @returns string
+   * @memberof CashAccounts
+   */
+  encodeUsername(username) {
+    const buffer = Buffer.from(username, 'utf8');
+    let encoded = bitbox.Script.encodeNullDataOutput(buffer);
+    const encodedUsername = bitbox.Script.toASM(encoded).split('OP_RETURN ')[1];
+    return encodedUsername;
   }
 
   /**
