@@ -553,22 +553,6 @@ class CashAccounts {
   }
 
   /**
-   * broadcast cashaccount registration with your own node
-   *
-   * @param {string} username
-   * @param {string} bchAddress
-   * @param {string} slpAddress
-   * @returns {string} txid - registration transaction hash
-   * @memberof CashAccounts
-   */
-  async trustlessRegistration(username, bchAddress, slpAddress) {
-    let txString = await this.generateRawTx(username, bchAddress, slpAddress);
-    let hex = await bchNode.signRawTransaction(txString);
-    let txid = await bchNode.sendRawTransaction(hex.hex);
-    return txid;
-  }
-
-  /**
    * find cash accounts associated with an address
    *
    * @param {string} address - ie: bitcoincash:qqqqqqq
@@ -594,59 +578,6 @@ class CashAccounts {
   }
 
   /**
-   * creates the raw transaction to be broadcast later
-   *
-   * @param {string} username
-   * @param {string} bchAddress
-   * @param {string} slpAddress
-   * @returns {string} raw transaction of registration
-   * @memberof CashAccounts
-   */
-  async generateRawTx(username, bchAddress, slpAddress) {
-    let registrationObj = this.createRegistrationObj(
-      username,
-      bchAddress,
-      slpAddress
-    );
-    let script = this.buildScript(registrationObj);
-
-    let unspent = await this.bchNode.listUnspent(1);
-    if (unspent === undefined || unspent.length === 0) {
-      unspent = await this.bchNode.listUnspent(0);
-    }
-    if (unspent === undefined || unspent.length === 0) {
-      return { status: 'no UTXOs available' };
-    }
-
-    const changeAddr = await this.bchNode.getRawChangeAddress();
-
-    let tx = new bch.Transaction().from(unspent).feePerKb(1002);
-    tx.addOutput(new bch.Transaction.Output({ script: script, satoshis: 0 }));
-    tx.change(changeAddr);
-
-    return tx.toString();
-  }
-
-  /**
-   * creates the raw op return script
-   *
-   * @param {string} username
-   * @param {string} bchAddress
-   * @param {string} slpAddress
-   * @returns {string} registration script
-   * @memberof CashAccounts
-   */
-  async createRawOpReturn(username, bchAddress, slpAddress) {
-    let registrationObj = this.createRegistrationObj(
-      username,
-      bchAddress,
-      slpAddress
-    );
-    let script = this.buildScript(registrationObj);
-    return script.toString();
-  }
-
-  /**
    * turn string username into hex'ed string for registration
    *
    * @param {string} username
@@ -658,46 +589,6 @@ class CashAccounts {
     let encoded = bitbox.Script.encodeNullDataOutput(buffer);
     const encodedUsername = bitbox.Script.toASM(encoded).split('OP_RETURN ')[1];
     return encodedUsername;
-  }
-
-  /**
-   *
-    build opreturn script
-   *
-   * @param {oject} registrationObj
-   * @returns
-   * @memberof CashAccounts
-   */
-  buildScript(registrationObj) {
-    const { username, bchHash, slpHash } = registrationObj;
-
-    let bch_map = {
-      p2pkh: '01',
-      p2sh: '02',
-      p2pc: '03',
-      p2sk: '04'
-    };
-    let token_map = {
-      p2pkh: '81',
-      p2sh: '82',
-      p2pc: '83',
-      p2sk: '84'
-    };
-
-    const s = new bch.Script();
-    s.add(bch.Opcode.OP_RETURN);
-    s.add(Buffer.from('01010101', 'hex'));
-    s.add(Buffer.from(username, 'utf8'));
-
-    for (let [key, value] of Object.entries(bchHash)) {
-      s.add(Buffer.from(bch_map[key] + value, 'hex'));
-    }
-    if (slpHash !== undefined) {
-      for (let [key, value] of Object.entries(slpHash)) {
-        s.add(Buffer.from(token_map[key] + value, 'hex'));
-      }
-    }
-    return s;
   }
 
   /**
