@@ -16,7 +16,7 @@ registration).
 
 ## Usage
 
-The library will default to using the api.cashaccount.info lookup server, but if
+The library will default to using the cashaccounts.bchdata.cash lookup server, but if
 you run your own you can pass in the url as the first parameter. Note,
 registrations cost some satoshis to broadcast and the funds are subsidied by the
 node running the lookup server. This library contains methods for a trusted
@@ -29,7 +29,7 @@ own node.
   const cashAccounts = new cashAccountClass(url, nodeCredentials) // both optional
 ```
 
-The `url` defaults to `https://api.cashaccount.info`. the `nodeCredentials`
+The `url` defaults to `https://cashaccounts.bchdata.cash`. the `nodeCredentials`
 object looks like
 
 ```
@@ -161,8 +161,6 @@ returns
   }
 }
 ```
-
-#### trustlessRegistration(username, bchAddress, slpAddress)
 
 ### Utils
 
